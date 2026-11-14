@@ -13,17 +13,19 @@ namespace CGAlgorithms.Algorithms.ConvexHull
         {
             outPoints = new List<Point>();
 
-            if (points == null || points.Count <= 3)
+            if (points == null || points.Count == 0)
             {
-                if (points != null) outPoints.AddRange(points);
                 return;
             }
 
-            // Clean up the input by removing duplicates
-            List<Point> uniquePoints = points.Distinct().ToList();
-            if (uniquePoints.Count <= 3)
+            // Point equality is tolerance based but Point has no matching GetHashCode,
+            // so LINQ Distinct() keeps duplicates. HullSupport.Distinct really removes them.
+            List<Point> uniquePoints = HullSupport.Distinct(points);
+
+            if (uniquePoints.Count <= 2)
             {
-                outPoints.AddRange(uniquePoints);
+                outPoints = uniquePoints;
+                outLines = HullSupport.BuildEdges(outPoints);
                 return;
             }
 
@@ -37,12 +39,13 @@ namespace CGAlgorithms.Algorithms.ConvexHull
                 p3Idx++;
             }
 
-            // Fallback if all points in the set are collinear
+            // Fallback if all points in the set are collinear. Distinct() already sorted
+            // them, so the two ends of the segment are the first and the last point.
             if (p3Idx == uniquePoints.Count)
             {
-                var sorted = uniquePoints.OrderBy(p => p.X).ThenBy(p => p.Y).ToList();
-                outPoints.Add(sorted.First());
-                outPoints.Add(sorted.Last());
+                outPoints.Add(uniquePoints[0]);
+                outPoints.Add(uniquePoints[uniquePoints.Count - 1]);
+                outLines = HullSupport.BuildEdges(outPoints);
                 return;
             }
 
@@ -130,9 +133,44 @@ namespace CGAlgorithms.Algorithms.ConvexHull
                 updatedHull.Add(currentPoint);
 
                 hull = updatedHull;
+
+                // The insertion can leave a vertex exactly on one of the new edges
+                // (a point that is collinear with its two neighbours). Such a point is
+                // not a hull vertex, so drop it before the next point is handled.
+                RemoveCollinearVertices(hull);
             }
 
             outPoints = hull;
+            outLines = HullSupport.BuildEdges(hull);
+        }
+
+        /// <summary>
+        /// Removes every vertex that lies on the segment between its two neighbours.
+        /// Removing a vertex can make its neighbours collinear as well, so the pass is
+        /// repeated until the hull is stable.
+        /// </summary>
+        /// <param name="hull">The hull to clean, in counter-clockwise order.</param>
+        private static void RemoveCollinearVertices(List<Point> hull)
+        {
+            bool removedAny;
+            do
+            {
+                removedAny = false;
+
+                for (int i = 0; i < hull.Count && hull.Count > 2; i++)
+                {
+                    int previous = (i - 1 + hull.Count) % hull.Count;
+                    int next = (i + 1) % hull.Count;
+
+                    if (HelperMethods.CheckTurn(new Line(hull[previous], hull[next]), hull[i]) == Enums.TurnType.Colinear)
+                    {
+                        hull.RemoveAt(i);
+                        removedAny = true;
+                        i--;
+                    }
+                }
+            }
+            while (removedAny && hull.Count > 2);
         }
 
         public override string ToString()
