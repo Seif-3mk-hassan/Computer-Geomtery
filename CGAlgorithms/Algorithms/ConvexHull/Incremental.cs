@@ -137,40 +137,11 @@ namespace CGAlgorithms.Algorithms.ConvexHull
                 // The insertion can leave a vertex exactly on one of the new edges
                 // (a point that is collinear with its two neighbours). Such a point is
                 // not a hull vertex, so drop it before the next point is handled.
-                RemoveCollinearVertices(hull);
+                HullSupport.RemoveCollinearVertices(hull);
             }
 
             outPoints = hull;
             outLines = HullSupport.BuildEdges(hull);
-        }
-
-        /// <summary>
-        /// Removes every vertex that lies on the segment between its two neighbours.
-        /// Removing a vertex can make its neighbours collinear as well, so the pass is
-        /// repeated until the hull is stable.
-        /// </summary>
-        /// <param name="hull">The hull to clean, in counter-clockwise order.</param>
-        private static void RemoveCollinearVertices(List<Point> hull)
-        {
-            bool removedAny;
-            do
-            {
-                removedAny = false;
-
-                for (int i = 0; i < hull.Count && hull.Count > 2; i++)
-                {
-                    int previous = (i - 1 + hull.Count) % hull.Count;
-                    int next = (i + 1) % hull.Count;
-
-                    if (HelperMethods.CheckTurn(new Line(hull[previous], hull[next]), hull[i]) == Enums.TurnType.Colinear)
-                    {
-                        hull.RemoveAt(i);
-                        removedAny = true;
-                        i--;
-                    }
-                }
-            }
-            while (removedAny && hull.Count > 2);
         }
 
         public override string ToString()

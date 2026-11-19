@@ -133,6 +133,75 @@ namespace CGAlgorithms.Algorithms.ConvexHull
         }
 
         /// <summary>
+        /// Checks whether all the points lie on a single line.
+        /// </summary>
+        /// <param name="sortedPoints">The points, sorted by X then Y, without duplicates.</param>
+        /// <returns>True when no triangle can be formed from the points.</returns>
+        public static bool AllCollinear(List<Point> sortedPoints)
+        {
+            for (int i = 2; i < sortedPoints.Count; i++)
+            {
+                if (Cross(sortedPoints[0], sortedPoints[1], sortedPoints[i]) != 0)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Orders points around their convex hull, counter-clockwise, starting at the
+        /// lowest then left most point. The points may include points lying on the hull
+        /// edges, which end up next to each other in the result.
+        /// </summary>
+        /// <param name="points">The hull vertices and the points on its edges, without duplicates.</param>
+        /// <returns>A new list with the points in counter-clockwise order.</returns>
+        public static List<Point> OrderCounterClockwise(List<Point> points)
+        {
+            if (points.Count < 3)
+            {
+                return new List<Point>(points);
+            }
+
+            Point pivot = FindLowestThenLeftmost(points);
+            List<Point> ordered = new List<Point>(points);
+            ordered.Sort((a, b) => CompareByAngle(pivot, a, b));
+
+            return ordered;
+        }
+
+        /// <summary>
+        /// Removes every vertex that lies on the segment between its two neighbours.
+        /// The vertices must be in clockwise or counter-clockwise order.
+        /// Removing a vertex can make its neighbours collinear as well, so the pass is
+        /// repeated until the polygon is stable.
+        /// </summary>
+        /// <param name="vertices">The hull vertices, in order around the hull.</param>
+        public static void RemoveCollinearVertices(List<Point> vertices)
+        {
+            bool removedAny;
+            do
+            {
+                removedAny = false;
+
+                for (int i = 0; i < vertices.Count && vertices.Count > 2; i++)
+                {
+                    int previous = (i - 1 + vertices.Count) % vertices.Count;
+                    int next = (i + 1) % vertices.Count;
+
+                    if (Cross(vertices[previous], vertices[next], vertices[i]) == 0)
+                    {
+                        vertices.RemoveAt(i);
+                        removedAny = true;
+                        i--;
+                    }
+                }
+            }
+            while (removedAny && vertices.Count > 2);
+        }
+
+        /// <summary>
         /// Builds the closed chain of lines that outlines the given hull vertices.
         /// </summary>
         /// <param name="vertices">The hull vertices, in order around the hull.</param>

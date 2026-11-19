@@ -38,7 +38,7 @@ namespace CGAlgorithms.Algorithms.ConvexHull
             // No triangle exists when every point is on one line, so the checks below
             // would reject every point. The hull of a segment is its two end points,
             // which are the first and the last point of the sorted set.
-            if (IsCollinear(uniquePoints))
+            if (HullSupport.AllCollinear(uniquePoints))
             {
                 List<Point> ends = new List<Point> { uniquePoints[0], uniquePoints[uniquePoints.Count - 1] };
                 Publish(ends, ref outPoints, ref outLines);
@@ -92,28 +92,9 @@ namespace CGAlgorithms.Algorithms.ConvexHull
 
             // The points were collected in input order; order them around the hull so the
             // result can be drawn as a closed polygon.
-            Point pivot = HullSupport.FindLowestThenLeftmost(outPoints);
-            outPoints.Sort((a, b) => HullSupport.CompareByAngle(pivot, a, b));
+            outPoints = HullSupport.OrderCounterClockwise(outPoints);
 
             outLines = HullSupport.BuildEdges(outPoints);
-        }
-
-        /// <summary>
-        /// Checks whether all the points lie on a single line.
-        /// </summary>
-        /// <param name="sortedPoints">The points, sorted by X then Y, without duplicates.</param>
-        /// <returns>True when no triangle can be formed from the points.</returns>
-        private static bool IsCollinear(List<Point> sortedPoints)
-        {
-            for (int i = 2; i < sortedPoints.Count; i++)
-            {
-                if (HullSupport.Cross(sortedPoints[0], sortedPoints[1], sortedPoints[i]) != 0)
-                {
-                    return false;
-                }
-            }
-
-            return true;
         }
 
         /// <summary>
